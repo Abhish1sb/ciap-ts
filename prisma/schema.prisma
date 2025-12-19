@@ -1,0 +1,94 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id            String   @id
+  name          String
+  businessDomain String
+  languagePolicy Json
+  hours         Json
+  channelConfig Json
+  kanbanConfig  Json
+  createdAt     DateTime @default(now())
+  isActive      Boolean  @default(true)
+
+  flows         Flow[]
+  conversations Conversation[]
+}
+
+model Flow {
+  id          String   @id
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  version     Int      @default(1)
+  status      String   @default("published")
+  startNodeId String
+  nodes       Json
+  createdAt   DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  @@index([tenantId])
+}
+
+model Conversation {
+  id                   String   @id
+  tenantId             String
+  tenant               Tenant   @relation(fields: [tenantId], references: [id])
+  customerPrimaryPhone String
+  customerWhatsappPhone String?
+  status               String   @default("New")
+  currentSnapshot      Json     @default("{}")
+  tags                 Json     @default("[]")
+  latestSummary        String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  transcriptEvents     TranscriptEvent[]
+  nodeEvents           NodeEvent[]
+
+  @@index([tenantId])
+  @@index([customerPrimaryPhone])
+}
+
+model TranscriptEvent {
+  id             String   @id
+  conversationId String
+  tenantId       String
+  sessionId      String
+  channel        String
+  speaker        String
+  content        String
+  meta           Json
+  createdAt      DateTime @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId])
+  @@index([tenantId])
+}
+
+model NodeEvent {
+  id             String   @id
+  conversationId String
+  tenantId       String
+  sessionId      String
+  nodeId         String
+  question       String
+  answer         String
+  extracted      Json
+  meta           Json
+  createdAt      DateTime @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId])
+  @@index([tenantId])
+}
